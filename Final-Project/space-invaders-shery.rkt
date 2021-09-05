@@ -178,20 +178,23 @@
 ;; Game -> Game
 ;; forward game state to next frame in animation
 
-(check-expect (forward-game (make-game (cons (make-invader 89 (+ HIEGHT INVADER-HEIGHT/2) 10) empty)
-                                       (cons (make-missile (tank-x T1) (+ 20 TANK-HEIGHT/2)) empty)
+(check-expect (forward-game (make-game (cons (make-invader 89 (+ HEIGHT INVADER-HEIGHT/2) 10) empty)
+                                       (cons (make-missile 77 (+ 20 TANK-HEIGHT/2)) empty)
                                        (make-tank (/ WIDTH 2) 0)
                                        true))
               (make-game (cons (make-invader (+ 89 10) (+ (+ HEIGHT INVADER-HEIGHT/2) 10) 10) empty)
-                         (cons (make-missile (tank-x T1) (+ (+ 20 TANK-HEIGHT/2) MISSILE-VELOCITY)) empty)
+                         (cons (make-missile 77 (+ (+ 20 TANK-HEIGHT/2) MISSILE-VELOCITY)) empty)
                          (make-tank (/ WIDTH 2) 0)
                          true))                                 ;; invader and missile just spawned -> game forward
 
-(check-expect (forward-game (make-game (cons (make-invader RIGHT-WALL 123 14) (cons (make-invader LEFT-WALL 189 -13) empty))
-                                       (cons (make-missile 140 190) (cons (make-missile (tank-x T1) (+ 20 TANK-HEIGHT/2)) empty))
+(check-expect (forward-game (make-game (cons (make-invader RIGHT-WALL 123 14)
+                                             (cons (make-invader LEFT-WALL 189 -13) empty))
+                                       (cons (make-missile 140 190)
+                                             (cons (make-missile (tank-x T1) (+ 20 TANK-HEIGHT/2)) empty))
                                        (make-tank 67 -1)
                                        true))
-              (make-game (cons (make-invader RIGHT-WALL 123 (* -1 14)) (cons (make-invader LEFT-WALL 189 (* -1 13)) empty))
+              (make-game (cons (make-invader (+ RIGHT-WALL -14) (+ 123 14) (* -1 14))
+                               (cons (make-invader (+ LEFT-WALL 13) (+ 189 13) (* -1 -13)) empty))
                          (cons (make-missile 140  (+ MISSILE-VELOCITY 190))
                                (cons (make-missile (tank-x T1) (+ MISSILE-VELOCITY (+ 20 TANK-HEIGHT/2))) empty))
                          (make-tank 67 -1)
@@ -205,8 +208,8 @@
                                                    (cons (make-missile 187 100) empty)))
                                        (make-tank 190 98)
                                        true))
-              (make-game (cons (make-invader RIGHT-WALL 123 (* -1 14))
-                               (cons (make-invader LEFT-WALL 189 (* -1 13)) empty))
+              (make-game (cons (make-invader (+ RIGHT-WALL -14) (+ 123 14) (* -1 14))
+                               (cons (make-invader (+ LEFT-WALL 13) (+ 189 13) (* -1 -13)) empty))
                          (cons (make-missile 140  (+ MISSILE-VELOCITY 190))
                                (cons (make-missile (tank-x T1) (+ MISSILE-VELOCITY (+ 20 TANK-HEIGHT/2))) empty))
                          (make-tank 190 98)
@@ -227,7 +230,7 @@
 
 (define (forward-game g)
   (cond [(game-over? (game-loi g)) (make-game empty empty (game-t g) false)]
-        [else (make-game (forward-loi (filter-loi (game-loi g) (game-lom g)))
+        [else (make-game (forward-loi (change-loi (filter-loi (game-loi g) (game-lom g))))
                          (forward-lom (filter-lom (game-lom g) (game-loi g)))
                          (game-t g)
                          (game-r? g))])
@@ -274,6 +277,9 @@
 (define (HEIGHT=? i)
   (= (invader-y i) HEIGHT))         
 
+
+
+;; ListOfInvader -> ListOfInvader
 
 
 
@@ -361,21 +367,6 @@
 
 ;; ListOfMissile ListOfInvaders -> ListOfMissiles
 ;; remove Missile from list if its x&y equals any of Invader
-;
-;                                loi
-;
-;                      empty        (cons m loi)
-;             
-;                   
-;         empty                 empty
-;                
-; lom
-;
-;                                       (if (i-match? (first lom) loi)
-;                                       (filter-lom (rest lom) loi)
-;                       lom             (cons (first lom) (filter-lom (rest lom) loi))
-;       (cons i lom)   
-
 
 (check-expect (filter-lom empty empty) empty)
 
@@ -399,8 +390,8 @@
                                 (cons (make-invader RIGHT-WALL 123 14)
                                       (cons (make-invader LEFT-WALL 189 -13) empty))))
               (cons (make-missile 140 190)
-                                (cons (make-missile (tank-x T1) (+ 20 TANK-HEIGHT/2))
-                                      (cons (make-missile 189 100) empty)))) 
+                    (cons (make-missile (tank-x T1) (+ 20 TANK-HEIGHT/2))
+                          (cons (make-missile 189 100) empty)))) 
 
 ;(define (filter-lom lom loi) lom)   ;stub
 
@@ -432,16 +423,147 @@
 
 
 ;; ListOfMissile -> ListOfMissile
-;; increase x&y of Missile by Missile-Velocity
-;; !!!
-(define (forward-lom lom) lom)
+;; increase y of every Missile by Missile-Velocity
+(check-expect (forward-lom empty) empty)
+(check-expect (forward-lom (cons (make-missile 67 190) (cons (make-missile 190 172) empty)))
+              (cons (make-missile 67 (+ MISSILE-VELOCITY 190))
+                    (cons (make-missile 190 (+ MISSILE-VELOCITY 172)) empty)))
+;(define (forward-lom lom) lom)   ;stub
  
+(define (forward-lom lom)
+  (cond [(empty? lom) empty]
+        [else (cons (forward-missile (first lom))
+                    (forward-lom (rest lom)))]))
+
+
+
+
+;; Missile -> Missile
+;; increase Missile-y by MISSILE-VELOCITY
+(check-expect (forward-missile (make-missile 67 190)) (make-missile 67 (+ MISSILE-VELOCITY 190)))
+; (define (forward-missile m) m)    ;stub
+(define (forward-missile m)
+  (make-missile (missile-x m)            
+                (+ MISSILE-VELOCITY (missile-y m))))           
+
+
 
 
 ;; ListOfInvader -> ListOfInvader
 ;; increase x&y of Invader by (invader-dx i)
-;; !!!
-(define (forward-loi loi) loi)
+
+(check-expect (forward-loi empty ) empty)
+
+(check-expect (forward-loi (cons (make-invader 190 70 12)
+                                 (cons (make-invader 80 60 -15)
+                                       (cons (make-invader 5 90 -12)
+                                             (cons (make-invader (- WIDTH 5) 190 14 )empty)))))
+              (cons (make-invader (+ 190 12) (+ 70 12) 12)
+                    (cons (make-invader (+ 80 -15) (+ 60 (* -1 -15)) -15)
+                          (cons (make-invader LEFT-WALL (+ 90 (* -1 -12)) -12)
+                                (cons (make-invader RIGHT-WALL (+ 190 14) 14)empty)))))
+
+
+;(define (forward-loi loi) loi)     ;stub
+
+(define (forward-loi loi)
+  (cond [(empty? loi) empty]
+        [else (cons (forward-invader (first loi))
+                    (forward-loi (rest loi)))]))
+
+
+
+
+;; Invader -> Invader
+;; increase/decrease invader-xy by invader-dx
+
+(check-expect (forward-invader (make-invader 190 70 12)) (make-invader (+ 190 12) (+ 70 12) 12))
+
+(check-expect (forward-invader (make-invader 80 60 -15)) (make-invader (+ 80 -15) (+ 60 15) -15))
+
+(check-expect (forward-invader (make-invader 5 90 -12)) (make-invader LEFT-WALL (+ 90 12) -12))
+
+(check-expect (forward-invader (make-invader (- WIDTH 5) 190 14 )) (make-invader RIGHT-WALL (+ 190 14) 14))
+;(define (forward-invader i) i)    ;stub
+
+(define (forward-invader i)
+  (cond [(< (- RIGHT-WALL
+                (invader-x i))
+             (invader-dx i)) (make-invader
+                              RIGHT-WALL
+                              (+ (invader-y i) (always-positive (invader-dx i)))
+                              (invader-dx i))]
+        [(< (- (invader-x i)
+                LEFT-WALL)
+             (always-positive(invader-dx i))) (make-invader LEFT-WALL
+                                           (+ (invader-y i) (always-positive (invader-dx i)))
+                                           (invader-dx i))]
+        [(or (= (invader-x i) LEFT-WALL)
+             (= (invader-x i) RIGHT-WALL)) (make-invader (+ LEFT-WALL (invader-dx i))
+                                           (+ (invader-y i) (always-positive (invader-dx i)))
+                                           (invader-dx i))]
+        [else (make-invader (+ (invader-x i) (invader-dx i))            
+                            (+ (invader-y i) (always-positive (invader-dx i)))            
+                            (invader-dx i))]))
+
+
+
+
+;; Number -> Number
+;; always return postive Number
+(check-expect (always-positive 12) 12)
+(check-expect (always-positive -12) 12)
+
+(define (always-positive n)
+  (if (< n 0)
+      (* -1 n)
+      n)
+  )
+
+
+
+
+
+
+;; ListOfInvader -> ListOfInvader
+;; change direction if hiting any wall
+
+(check-expect (change-loi empty) empty)
+
+(check-expect (change-loi (cons (make-invader 190 70 12) (cons (make-invader 80 60 -15) empty)))
+              (cons (make-invader 190 70 12) (cons (make-invader 80 60 -15) empty)))
+
+(check-expect (change-loi (cons (make-invader RIGHT-WALL 170 15) (cons (make-invader LEFT-WALL 200 -11) empty)))
+              (cons (make-invader RIGHT-WALL 170 (* -1 15)) (cons (make-invader LEFT-WALL 200 (* -1 -11)) empty)))
+
+
+;(define (change-loi loi) loi)   ;stub
+
+(define (change-loi loi)
+  (cond [(empty? loi) empty]
+        [else (cons (change-invader (first loi))
+                    (change-loi (rest loi)))]))
+                            
+
+
+
+
+;; Invader -> Invader
+;; multiply invader-dx by -1 if invader-x equals LEFT-WALL or RIGHT-WALL return invader
+
+(check-expect (change-invader (make-invader 170 187 -12)) (make-invader 170 187 -12))
+
+(check-expect (change-invader (make-invader RIGHT-WALL 127 -12)) (make-invader RIGHT-WALL 127 (* -1 -12)))
+
+;(define (change-invader i) i)    ;stub
+
+(define (change-invader i)
+  (cond [(or (= (invader-x i) LEFT-WALL) (= (invader-x i) RIGHT-WALL))
+         (make-invader (invader-x i)            
+                       (invader-y i)            
+                       (* -1 (invader-dx i)))]
+        [else i]))
+  
 
 
 
